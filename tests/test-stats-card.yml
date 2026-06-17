@@ -1,0 +1,40 @@
+name: Test stats card generation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REPOSITORY_OWNER: anuraghazra
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          card: stats
+          options: "username=anuraghazra"
+          path: output/stats-card.svg
+          token: ${{ github.token }}
+      - name: Assert output path is set
+        env:
+          ACTUAL: ${{ steps.action.outputs.path }}
+        run: |
+          echo "actual path output: $ACTUAL"
+          if [ "$ACTUAL" != "output/stats-card.svg" ]; then
+            echo "FAIL: expected output path 'output/stats-card.svg', got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS: output path matches"
+      - name: Assert SVG file was written
+        run: |
+          echo "Checking for SVG file at output/stats-card.svg"
+          if [ ! -f "output/stats-card.svg" ]; then
+            echo "FAIL: SVG file not found at output/stats-card.svg"
+            exit 1
+          fi
+          echo "File size: $(wc -c < output/stats-card.svg) bytes"
+          if ! grep -q "<svg" output/stats-card.svg; then
+            echo "FAIL: output file does not appear to be an SVG"
+            exit 1
+          fi
+          echo "PASS: SVG file exists and contains SVG content"
