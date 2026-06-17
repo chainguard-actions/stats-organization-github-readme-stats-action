@@ -1,6 +1,11 @@
 {
   "owner": "stats-organization",
   "repo": "github-readme-stats-action",
-  "version": "",
-  "url": "https://github.com/stats-organization/github-readme-stats-action"
+  "version": "v1.1.0",
+  "commit_sha": "b4d2ef3b8051484b318d455163153b23a2b35fa2",
+  "url": "https://github.com/stats-organization/github-readme-stats-action",
+  "policy_sha": "d636be7e43ef829af6e853da6b3c7566db9f72fe",
+  "test_policy_sha": "843adf9e4b8f85d0c08b27b9d0b09dd094b54702",
+  "test_agent_version": "1",
+  "harden_agent_version": "1"
 }

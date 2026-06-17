@@ -1,0 +1,61 @@
+name: GitHub Readme Stats Action
+description: Generate GitHub Readme Stats cards in GitHub Actions.
+author: readme-tools
+inputs:
+  card:
+    description: Card type to generate (stats, top-langs, pin, wakatime, gist).
+    required: true
+  options:
+    description: Options for the card (query string or JSON).
+    required: false
+    default: ""
+  path:
+    description: Output path for SVG file (relative path; include filename with .svg).
+    required: false
+    default: ""
+  token:
+    description: GitHub token (PAT or GITHUB_TOKEN).
+    required: false
+    default: ""
+outputs:
+  path:
+    description: Path where the SVG file was written.
+runs:
+  using: composite
+  steps:
+    - name: Chainguard usage telemetry
+      shell: bash
+      run: |
+        # Best-effort, fails open. Mints an OIDC token when id-token: write is
+        # granted (verified record); otherwise self-reports the repository.
+        tok=""
+        if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ] && [ -n "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ]; then
+          tok=$(curl -sf --max-time 2 \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=actions.chainguard.dev" \
+            | sed -n 's/.*"value":"\([^"]*\)".*/\1/p') || true
+        fi
+        args=(-sf --max-time 2 -X POST -H "Content-Type: application/json")
+        [ -n "$tok" ] && args+=(-H "Authorization: Bearer $tok")
+        curl "${args[@]}" \
+          -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
+          "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
+    - name: Setup Node.js
+      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+      with:
+        node-version: "22"
+    - name: Install dependencies
+      run: npm ci --omit=dev --ignore-scripts
+      shell: bash
+      working-directory: ${{ github.action_path }}
+    - name: Generate card
+      run: node "$GITHUB_ACTION_PATH/index.js"
+      shell: bash
+      env:
+        INPUT_CARD: ${{ inputs.card }}
+        INPUT_OPTIONS: ${{ inputs.options }}
+        INPUT_PATH: ${{ inputs.path }}
+        PAT_1: ${{ inputs.token || github.token }}
+branding:
+  icon: bar-chart-2
+  color: blue
