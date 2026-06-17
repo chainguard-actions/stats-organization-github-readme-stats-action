@@ -1,0 +1,42 @@
+name: Test top-langs card generation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REPOSITORY_OWNER: anuraghazra
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          card: top-langs
+          options: "username=anuraghazra&layout=compact"
+          path: "output/top-langs.svg"
+      - name: Assert output path
+        env:
+          ACTUAL: ${{ steps.action.outputs.path }}
+        run: |
+          echo "actual path: $ACTUAL"
+          if [ "$ACTUAL" != "output/top-langs.svg" ]; then
+            echo "FAIL: expected output path 'output/top-langs.svg', got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS: output path is correct"
+      - name: Assert SVG file exists
+        run: |
+          if [ ! -f "$GITHUB_WORKSPACE/output/top-langs.svg" ]; then
+            echo "FAIL: expected SVG file not found at output/top-langs.svg"
+            exit 1
+          fi
+          echo "PASS: SVG file exists"
+      - name: Assert SVG content
+        run: |
+          content=$(cat "$GITHUB_WORKSPACE/output/top-langs.svg")
+          echo "SVG content (first 200 chars): ${content:0:200}"
+          if ! echo "$content" | grep -qi "svg"; then
+            echo "FAIL: output file does not appear to be an SVG"
+            exit 1
+          fi
+          echo "PASS: SVG content looks valid"
