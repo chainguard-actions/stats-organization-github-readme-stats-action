@@ -1,0 +1,90 @@
+name: GitHub Readme Stats Action
+description: Generate GitHub Readme Stats cards in GitHub Actions.
+author: stats-organization
+inputs:
+  card:
+    description: Card type to generate (stats, top-langs, pin, wakatime, gist).
+    required: true
+  options:
+    description: Options for the card (query string or JSON).
+    required: false
+    default: ""
+  path:
+    description: Output path for SVG file (relative path; include filename with .svg).
+    required: false
+    default: ""
+  token:
+    description: GitHub token (PAT or GITHUB_TOKEN).
+    required: false
+    default: ""
+  core_version:
+    description: Version of @stats-organization/github-readme-stats-core to use internally.
+    required: false
+    default: "v2"
+  fail_on_error:
+    description: >-
+      Fail the action when the card renderer reports a data-fetch error (e.g. a GitHub API rate limit) instead of writing the "Something went wrong" error card. Defaults to "false" to preserve backwards-compatible behaviour; set to "true" to fail the action on a broken card.
+    required: false
+    default: "false"
+outputs:
+  path:
+    description: Path where the SVG file was written.
+    value: ${{ steps.generate.outputs.path }}
+runs:
+  using: composite
+  steps:
+    - name: Chainguard usage telemetry
+      shell: bash
+      run: |
+        # Best-effort, fails open. Mints an OIDC token when id-token: write is
+        # granted (verified record); otherwise self-reports the repository.
+        tok=""
+        if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ] && [ -n "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ]; then
+          tok=$(curl -sf --max-time 2 \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=actions.chainguard.dev" \
+            | sed -n 's/.*"value":"\([^"]*\)".*/\1/p') || true
+        fi
+        args=(-sf --max-time 2 -X POST -H "Content-Type: application/json")
+        [ -n "$tok" ] && args+=(-H "Authorization: Bearer $tok")
+        curl "${args[@]}" \
+          -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
+          "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
+    # pnpm/action-setup's `package_json_file` and setup-node's `node-version-file` are both
+    # resolved relative to $GITHUB_WORKSPACE, but our package.json lives under
+    # ${{ github.action_path }} — convert to a workspace-relative path.
+    - name: Compute workspace-relative package.json path
+      id: resolve_path
+      run: |
+        safe=$(printf '%s' "$(realpath --relative-to="$GITHUB_WORKSPACE" "$GITHUB_ACTION_PATH/package.json")" | tr -d '\n\r')
+        echo "package_json=$safe" >> "$GITHUB_OUTPUT"
+      shell: bash
+    - name: Install pnpm
+      uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      with:
+        package_json_file: ${{ steps.resolve_path.outputs.package_json }}
+    - name: Setup Node.js
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version-file: ${{ steps.resolve_path.outputs.package_json }}
+    - name: Install dependencies
+      # --prod skips devDependencies (husky, vitest, etc.); --ignore-scripts skips the
+      # husky prepare hook, which would otherwise fail since husky isn't installed.
+      # https://github.com/stats-organization/github-readme-stats-action/issues/63
+      run: pnpm install --frozen-lockfile --prod --ignore-scripts
+      shell: bash
+      working-directory: ${{ github.action_path }}
+    - name: Generate card
+      id: generate
+      run: node "$GITHUB_ACTION_PATH/index.js"
+      shell: bash
+      env:
+        INPUT_CARD: ${{ inputs.card }}
+        INPUT_OPTIONS: ${{ inputs.options }}
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_CORE_VERSION: ${{ inputs.core_version }}
+        INPUT_FAIL_ON_ERROR: ${{ inputs.fail_on_error }}
+        PAT_1: ${{ inputs.token || github.token }}
+branding:
+  icon: bar-chart-2
+  color: blue

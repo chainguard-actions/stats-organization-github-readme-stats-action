@@ -1,0 +1,43 @@
+name: Test default output path
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          card: stats
+          options: "username=anuraghazra"
+          # No path specified — should default to profile/stats.svg
+      - name: Assert output path defaults to profile/stats.svg
+        env:
+          ACTUAL: ${{ steps.action.outputs.path }}
+        run: |
+          echo "actual path output: $ACTUAL"
+          EXPECTED="profile/stats.svg"
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "FAIL: expected '$EXPECTED' but got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS: default path is correct"
+      - name: Assert default SVG file was written
+        run: |
+          FILE="profile/stats.svg"
+          echo "Checking for file: $FILE"
+          if [ ! -f "$FILE" ]; then
+            echo "FAIL: expected SVG file not found at $FILE"
+            exit 1
+          fi
+          echo "PASS: SVG file exists at default path"
+      - name: Assert SVG file contains SVG content
+        run: |
+          FILE="profile/stats.svg"
+          if ! grep -q "<svg" "$FILE"; then
+            echo "FAIL: file does not contain SVG content"
+            cat "$FILE"
+            exit 1
+          fi
+          echo "PASS: file contains SVG content"

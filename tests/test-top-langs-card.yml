@@ -1,0 +1,42 @@
+name: Test top-langs card generation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          card: top-langs
+          options: "username=anuraghazra"
+          path: "test-output/top-langs.svg"
+      - name: Assert output path is set
+        env:
+          ACTUAL: ${{ steps.action.outputs.path }}
+        run: |
+          echo "actual path output: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: expected path output to be non-empty"
+            exit 1
+          fi
+          echo "PASS: path output is set to: $ACTUAL"
+      - name: Assert SVG file was written
+        run: |
+          FILE="test-output/top-langs.svg"
+          echo "Checking for file: $FILE"
+          if [ ! -f "$FILE" ]; then
+            echo "FAIL: expected SVG file not found at $FILE"
+            exit 1
+          fi
+          echo "PASS: SVG file exists"
+      - name: Assert SVG file contains SVG content
+        run: |
+          FILE="test-output/top-langs.svg"
+          if ! grep -q "<svg" "$FILE"; then
+            echo "FAIL: file does not contain SVG content"
+            cat "$FILE"
+            exit 1
+          fi
+          echo "PASS: file contains SVG content"

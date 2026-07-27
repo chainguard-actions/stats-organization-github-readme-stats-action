@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.head_ref }}"
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions: {}
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Run E2E tests
+        run: pnpm run test
+        env:
+          PAT_1: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY_OWNER: "rickstaa"
+
+  code-checks:
+    name: Code checks
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Format
+        run: pnpm run format:check
+
+      - name: Lint (knip)
+        run: pnpm run lint:knip
