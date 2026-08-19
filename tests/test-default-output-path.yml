@@ -4,8 +4,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_REPOSITORY_OWNER: anuraghazra
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - id: action
@@ -14,26 +12,31 @@ jobs:
           card: stats
           options: "username=anuraghazra"
           token: ${{ github.token }}
-      - name: Assert default output path is set
+          # No path provided — should default to profile/stats.svg
+      - name: Assert output path defaults to profile/stats.svg
         env:
           ACTUAL: ${{ steps.action.outputs.path }}
         run: |
           echo "actual path output: $ACTUAL"
-          if [ "$ACTUAL" != "profile/stats.svg" ]; then
-            echo "FAIL: expected default output path 'profile/stats.svg', got '$ACTUAL'"
+          EXPECTED="profile/stats.svg"
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "FAIL: expected path '$EXPECTED' but got '$ACTUAL'"
             exit 1
           fi
-          echo "PASS: default output path matches"
-      - name: Assert SVG file was written at default path
+          echo "PASS: default path is '$ACTUAL'"
+      - name: Assert default SVG file exists
         run: |
-          echo "Checking for SVG file at profile/stats.svg"
           if [ ! -f "profile/stats.svg" ]; then
-            echo "FAIL: SVG file not found at profile/stats.svg"
+            echo "FAIL: expected SVG file at profile/stats.svg not found"
             exit 1
           fi
-          echo "File size: $(wc -c < profile/stats.svg) bytes"
-          if ! grep -q "<svg" profile/stats.svg; then
-            echo "FAIL: output file does not appear to be an SVG"
+          echo "PASS: profile/stats.svg exists"
+      - name: Assert default SVG file contains SVG content
+        run: |
+          CONTENT=$(cat "profile/stats.svg")
+          echo "first 200 chars: ${CONTENT:0:200}"
+          if ! echo "$CONTENT" | grep -qi "<svg"; then
+            echo "FAIL: file does not appear to be an SVG"
             exit 1
           fi
-          echo "PASS: SVG file exists at default path and contains SVG content"
+          echo "PASS: file contains SVG content"

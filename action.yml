@@ -46,9 +46,12 @@ runs:
           "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
     - name: Resolve relative path to package.json
       id: resolve_path
+      env:
+        ACTION_PATH: ${{ github.action_path }}
       run: |
-        safe=$(realpath --relative-to="$GITHUB_WORKSPACE" "$GITHUB_ACTION_PATH/package.json" | tr -d '\n\r')
-        printf 'package_json=%s\n' "$safe" >> "$GITHUB_OUTPUT"
+        val=$(realpath --relative-to="$GITHUB_WORKSPACE" "$ACTION_PATH/package.json")
+        safe=$(printf '%s' "$val" | tr -d '\n\r')
+        echo "package_json=$safe" >> "$GITHUB_OUTPUT"
       shell: bash
     - name: Install pnpm
       uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
@@ -63,9 +66,10 @@ runs:
       shell: bash
       working-directory: ${{ github.action_path }}
     - name: Generate card
-      run: node "$GITHUB_ACTION_PATH/index.js"
+      run: node "$ACTION_PATH/index.js"
       shell: bash
       env:
+        ACTION_PATH: ${{ github.action_path }}
         INPUT_CARD: ${{ inputs.card }}
         INPUT_OPTIONS: ${{ inputs.options }}
         INPUT_PATH: ${{ inputs.path }}

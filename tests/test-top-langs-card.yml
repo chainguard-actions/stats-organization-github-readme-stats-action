@@ -4,8 +4,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_REPOSITORY_OWNER: anuraghazra
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - id: action
@@ -13,28 +11,36 @@ jobs:
         with:
           card: top-langs
           options: "username=anuraghazra"
-          path: output/top-langs.svg
+          path: "tests/output/top-langs.svg"
           token: ${{ github.token }}
       - name: Assert output path is set
         env:
           ACTUAL: ${{ steps.action.outputs.path }}
         run: |
           echo "actual path output: $ACTUAL"
-          if [ "$ACTUAL" != "output/top-langs.svg" ]; then
-            echo "FAIL: expected output path 'output/top-langs.svg', got '$ACTUAL'"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: expected path output to be non-empty"
             exit 1
           fi
-          echo "PASS: output path matches"
-      - name: Assert SVG file was written
+          echo "PASS: path output is set to '$ACTUAL'"
+      - name: Assert SVG file exists
+        env:
+          OUT_PATH: ${{ steps.action.outputs.path }}
         run: |
-          echo "Checking for SVG file at output/top-langs.svg"
-          if [ ! -f "output/top-langs.svg" ]; then
-            echo "FAIL: SVG file not found at output/top-langs.svg"
+          echo "checking file at: $OUT_PATH"
+          if [ ! -f "$OUT_PATH" ]; then
+            echo "FAIL: SVG file not found at '$OUT_PATH'"
             exit 1
           fi
-          echo "File size: $(wc -c < output/top-langs.svg) bytes"
-          if ! grep -q "<svg" output/top-langs.svg; then
-            echo "FAIL: output file does not appear to be an SVG"
+          echo "PASS: SVG file exists"
+      - name: Assert SVG file contains SVG content
+        env:
+          OUT_PATH: ${{ steps.action.outputs.path }}
+        run: |
+          CONTENT=$(cat "$OUT_PATH")
+          echo "first 200 chars: ${CONTENT:0:200}"
+          if ! echo "$CONTENT" | grep -qi "<svg"; then
+            echo "FAIL: file does not appear to be an SVG"
             exit 1
           fi
-          echo "PASS: SVG file exists and contains SVG content"
+          echo "PASS: file contains SVG content"

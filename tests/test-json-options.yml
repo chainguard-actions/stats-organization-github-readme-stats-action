@@ -1,4 +1,4 @@
-name: Test stats card generation
+name: Test JSON options format
 on:
   workflow_dispatch:
 jobs:
@@ -10,8 +10,8 @@ jobs:
         uses: .
         with:
           card: stats
-          options: "username=anuraghazra"
-          path: "tests/output/stats.svg"
+          options: '{"username": "anuraghazra", "show_icons": "true"}'
+          path: "tests/output/stats-json-opts.svg"
           token: ${{ github.token }}
       - name: Assert output path is set
         env:

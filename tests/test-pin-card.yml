@@ -1,4 +1,4 @@
-name: Test stats card generation
+name: Test pin card generation
 on:
   workflow_dispatch:
 jobs:
@@ -9,9 +9,9 @@ jobs:
       - id: action
         uses: .
         with:
-          card: stats
-          options: "username=anuraghazra"
-          path: "tests/output/stats.svg"
+          card: pin
+          options: "username=anuraghazra&repo=github-readme-stats"
+          path: "tests/output/pin.svg"
           token: ${{ github.token }}
       - name: Assert output path is set
         env:
