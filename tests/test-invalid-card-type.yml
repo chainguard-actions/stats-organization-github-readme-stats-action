@@ -10,9 +10,9 @@ jobs:
         uses: .
         with:
           card: invalid-card-type
-          token: ${{ github.token }}
+          options: "username=anuraghazra"
         continue-on-error: true
-      - name: Assert action failed with unsupported card type
+      - name: Assert action failed with unsupported card error
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |

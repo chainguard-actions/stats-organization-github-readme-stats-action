@@ -1,4 +1,4 @@
-name: Test top-langs card generation
+name: Test username defaults to repository owner
 on:
   workflow_dispatch:
 jobs:
@@ -9,28 +9,28 @@ jobs:
       - id: action
         uses: .
         with:
-          card: top-langs
-          options: '{"username":"anuraghazra","layout":"compact"}'
-          path: "output/top-langs.svg"
+          card: stats
+          # No username in options — should default to GITHUB_REPOSITORY_OWNER
+          path: "output/stats-default-user.svg"
       - name: Assert output path matches
         env:
           ACTUAL: ${{ steps.action.outputs.path }}
         run: |
           echo "actual path: $ACTUAL"
-          if [ "$ACTUAL" != "output/top-langs.svg" ]; then
-            echo "FAIL: expected 'output/top-langs.svg' but got '$ACTUAL'"
+          if [ "$ACTUAL" != "output/stats-default-user.svg" ]; then
+            echo "FAIL: expected 'output/stats-default-user.svg' but got '$ACTUAL'"
             exit 1
           fi
           echo "PASS: output path matches"
       - name: Assert SVG file exists and contains SVG content
         run: |
-          if [ ! -f "output/top-langs.svg" ]; then
-            echo "FAIL: SVG file not found at output/top-langs.svg"
+          if [ ! -f "output/stats-default-user.svg" ]; then
+            echo "FAIL: SVG file not found at output/stats-default-user.svg"
             exit 1
           fi
-          if ! grep -q "<svg" "output/top-langs.svg"; then
+          if ! grep -q "<svg" "output/stats-default-user.svg"; then
             echo "FAIL: file does not contain SVG content"
-            cat "output/top-langs.svg"
+            cat "output/stats-default-user.svg"
             exit 1
           fi
           echo "PASS: SVG file exists and contains SVG content"

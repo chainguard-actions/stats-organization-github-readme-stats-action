@@ -1,4 +1,4 @@
-name: Test top-langs card generation
+name: Test stats card generation
 on:
   workflow_dispatch:
 jobs:
@@ -9,28 +9,28 @@ jobs:
       - id: action
         uses: .
         with:
-          card: top-langs
-          options: '{"username":"anuraghazra","layout":"compact"}'
-          path: "output/top-langs.svg"
+          card: stats
+          options: "username=anuraghazra"
+          path: "output/stats.svg"
       - name: Assert output path matches
         env:
           ACTUAL: ${{ steps.action.outputs.path }}
         run: |
           echo "actual path: $ACTUAL"
-          if [ "$ACTUAL" != "output/top-langs.svg" ]; then
-            echo "FAIL: expected 'output/top-langs.svg' but got '$ACTUAL'"
+          if [ "$ACTUAL" != "output/stats.svg" ]; then
+            echo "FAIL: expected 'output/stats.svg' but got '$ACTUAL'"
             exit 1
           fi
           echo "PASS: output path matches"
       - name: Assert SVG file exists and contains SVG content
         run: |
-          if [ ! -f "output/top-langs.svg" ]; then
-            echo "FAIL: SVG file not found at output/top-langs.svg"
+          if [ ! -f "output/stats.svg" ]; then
+            echo "FAIL: SVG file not found at output/stats.svg"
             exit 1
           fi
-          if ! grep -q "<svg" "output/top-langs.svg"; then
+          if ! grep -q "<svg" "output/stats.svg"; then
             echo "FAIL: file does not contain SVG content"
-            cat "output/top-langs.svg"
+            cat "output/stats.svg"
             exit 1
           fi
           echo "PASS: SVG file exists and contains SVG content"

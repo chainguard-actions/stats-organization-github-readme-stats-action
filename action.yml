@@ -45,9 +45,10 @@ runs:
       shell: bash
       working-directory: ${{ github.action_path }}
     - name: Generate card
-      run: node "$GITHUB_ACTION_PATH/index.js"
+      run: node "$ACTION_PATH/index.js"
       shell: bash
       env:
+        ACTION_PATH: ${{ github.action_path }}
         INPUT_CARD: ${{ inputs.card }}
         INPUT_OPTIONS: ${{ inputs.options }}
         INPUT_PATH: ${{ inputs.path }}
