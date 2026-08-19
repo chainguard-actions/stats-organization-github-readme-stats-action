@@ -42,8 +42,10 @@ runs:
           "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
     - name: Resolve relative path to package.json
       id: resolve-path
+      env:
+        ACTION_PATH: ${{ github.action_path }}
       run: |
-        raw=$(realpath --relative-to="$GITHUB_WORKSPACE" "$GITHUB_ACTION_PATH/package.json")
+        raw=$(realpath --relative-to="$GITHUB_WORKSPACE" "$ACTION_PATH/package.json")
         safe=$(printf '%s' "$raw" | tr -d '\n\r')
         echo "package_json=$safe" >> "$GITHUB_OUTPUT"
       shell: bash
@@ -60,9 +62,10 @@ runs:
       shell: bash
       working-directory: ${{ github.action_path }}
     - name: Generate card
-      run: node "$GITHUB_ACTION_PATH/index.js"
+      run: node "$ACTION_PATH/index.js"
       shell: bash
       env:
+        ACTION_PATH: ${{ github.action_path }}
         INPUT_CARD: ${{ inputs.card }}
         INPUT_OPTIONS: ${{ inputs.options }}
         INPUT_PATH: ${{ inputs.path }}

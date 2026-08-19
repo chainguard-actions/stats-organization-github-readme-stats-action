@@ -1,4 +1,4 @@
-name: Test top-langs card generation
+name: Test pin card generation
 on:
   workflow_dispatch:
 jobs:
@@ -10,9 +10,9 @@ jobs:
       - id: action
         uses: .
         with:
-          card: top-langs
-          options: "username=anuraghazra"
-          path: "test-output/top-langs.svg"
+          card: pin
+          options: "username=anuraghazra&repo=github-readme-stats"
+          path: "test-output/pin.svg"
         env:
           PAT_1: ${{ github.token }}
 
@@ -21,15 +21,15 @@ jobs:
           ACTUAL: ${{ steps.action.outputs.path }}
         run: |
           echo "actual path output: $ACTUAL"
-          if [ "$ACTUAL" != "test-output/top-langs.svg" ]; then
-            echo "FAIL: expected 'test-output/top-langs.svg' but got '$ACTUAL'"
+          if [ "$ACTUAL" != "test-output/pin.svg" ]; then
+            echo "FAIL: expected 'test-output/pin.svg' but got '$ACTUAL'"
             exit 1
           fi
           echo "PASS: output path matches"
 
       - name: Assert SVG file exists and is non-empty
         run: |
-          FILE="$GITHUB_WORKSPACE/test-output/top-langs.svg"
+          FILE="$GITHUB_WORKSPACE/test-output/pin.svg"
           echo "Checking file: $FILE"
           if [ ! -f "$FILE" ]; then
             echo "FAIL: SVG file not found at $FILE"

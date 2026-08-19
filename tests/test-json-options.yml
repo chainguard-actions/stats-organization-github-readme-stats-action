@@ -4,39 +4,46 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_REPOSITORY_OWNER: anuraghazra
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
       - id: action
         uses: .
         with:
           card: stats
-          options: '{"username": "anuraghazra", "show_icons": "true"}'
-          path: "output/stats-json-opts.svg"
-      - name: Assert output path
+          options: '{"username": "anuraghazra", "show_icons": "true", "theme": "dark"}'
+          path: "test-output/stats-json-opts.svg"
+        env:
+          PAT_1: ${{ github.token }}
+
+      - name: Assert output path is set
         env:
           ACTUAL: ${{ steps.action.outputs.path }}
         run: |
-          echo "actual path: $ACTUAL"
-          if [ "$ACTUAL" != "output/stats-json-opts.svg" ]; then
-            echo "FAIL: expected output path 'output/stats-json-opts.svg', got '$ACTUAL'"
+          echo "actual path output: $ACTUAL"
+          if [ "$ACTUAL" != "test-output/stats-json-opts.svg" ]; then
+            echo "FAIL: expected 'test-output/stats-json-opts.svg' but got '$ACTUAL'"
             exit 1
           fi
-          echo "PASS: output path is correct"
-      - name: Assert SVG file exists
+          echo "PASS: output path matches"
+
+      - name: Assert SVG file exists and is non-empty
         run: |
-          if [ ! -f "$GITHUB_WORKSPACE/output/stats-json-opts.svg" ]; then
-            echo "FAIL: expected SVG file not found at output/stats-json-opts.svg"
+          FILE="$GITHUB_WORKSPACE/test-output/stats-json-opts.svg"
+          echo "Checking file: $FILE"
+          if [ ! -f "$FILE" ]; then
+            echo "FAIL: SVG file not found at $FILE"
             exit 1
           fi
-          echo "PASS: SVG file exists"
-      - name: Assert SVG content
-        run: |
-          content=$(cat "$GITHUB_WORKSPACE/output/stats-json-opts.svg")
-          echo "SVG content (first 200 chars): ${content:0:200}"
-          if ! echo "$content" | grep -qi "svg"; then
-            echo "FAIL: output file does not appear to be an SVG"
+          SIZE=$(wc -c < "$FILE")
+          echo "File size: $SIZE bytes"
+          if [ "$SIZE" -lt 100 ]; then
+            echo "FAIL: SVG file is too small ($SIZE bytes)"
             exit 1
           fi
-          echo "PASS: SVG content looks valid"
+          if ! grep -q "<svg" "$FILE"; then
+            echo "FAIL: file does not appear to be an SVG"
+            cat "$FILE"
+            exit 1
+          fi
+          echo "PASS: SVG file exists and looks valid with JSON options"

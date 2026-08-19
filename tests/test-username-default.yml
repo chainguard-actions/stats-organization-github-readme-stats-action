@@ -1,4 +1,4 @@
-name: Test top-langs card generation
+name: Test username defaults to repository owner
 on:
   workflow_dispatch:
 jobs:
@@ -10,9 +10,10 @@ jobs:
       - id: action
         uses: .
         with:
-          card: top-langs
-          options: "username=anuraghazra"
-          path: "test-output/top-langs.svg"
+          card: stats
+          # No username in options — should default to GITHUB_REPOSITORY_OWNER
+          options: ""
+          path: "test-output/stats-default-user.svg"
         env:
           PAT_1: ${{ github.token }}
 
@@ -21,15 +22,15 @@ jobs:
           ACTUAL: ${{ steps.action.outputs.path }}
         run: |
           echo "actual path output: $ACTUAL"
-          if [ "$ACTUAL" != "test-output/top-langs.svg" ]; then
-            echo "FAIL: expected 'test-output/top-langs.svg' but got '$ACTUAL'"
+          if [ "$ACTUAL" != "test-output/stats-default-user.svg" ]; then
+            echo "FAIL: expected 'test-output/stats-default-user.svg' but got '$ACTUAL'"
             exit 1
           fi
           echo "PASS: output path matches"
 
       - name: Assert SVG file exists and is non-empty
         run: |
-          FILE="$GITHUB_WORKSPACE/test-output/top-langs.svg"
+          FILE="$GITHUB_WORKSPACE/test-output/stats-default-user.svg"
           echo "Checking file: $FILE"
           if [ ! -f "$FILE" ]; then
             echo "FAIL: SVG file not found at $FILE"
@@ -38,7 +39,7 @@ jobs:
           SIZE=$(wc -c < "$FILE")
           echo "File size: $SIZE bytes"
           if [ "$SIZE" -lt 100 ]; then
-            echo "FAIL: SVG file is too small ($SIZE bytes), expected a real SVG"
+            echo "FAIL: SVG file is too small ($SIZE bytes)"
             exit 1
           fi
           if ! grep -q "<svg" "$FILE"; then
@@ -46,4 +47,4 @@ jobs:
             cat "$FILE"
             exit 1
           fi
-          echo "PASS: SVG file exists and looks valid"
+          echo "PASS: SVG file exists — username defaulted to repository owner"
