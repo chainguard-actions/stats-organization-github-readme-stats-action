@@ -4,50 +4,37 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_EVENT_NAME: push
-      GITHUB_REF: refs/heads/main
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
       - id: action
         uses: .
         with:
           card: stats
-          options: "username=anuraghazra&hide_border=true"
-          path: /tmp/stats-output/stats.svg
+          options: "username=anuraghazra"
+          path: "test-output/stats.svg"
           token: ${{ github.token }}
-
       - name: Assert output path is set
         env:
           ACTUAL: ${{ steps.action.outputs.path }}
         run: |
-          echo "actual path: $ACTUAL"
+          echo "actual path output: $ACTUAL"
           if [ -z "$ACTUAL" ]; then
-            echo "FAIL: output path is empty"
+            echo "FAIL: expected path output to be non-empty"
             exit 1
           fi
-          echo "PASS: output path is set to $ACTUAL"
-
-      - name: Assert SVG file exists
+          echo "PASS: path output is set to '$ACTUAL'"
+      - name: Assert SVG file exists and contains SVG content
         env:
-          ACTUAL: ${{ steps.action.outputs.path }}
+          OUTPUT_PATH: ${{ steps.action.outputs.path }}
         run: |
-          echo "checking for SVG at: $ACTUAL"
-          if [ ! -f "$ACTUAL" ]; then
-            echo "FAIL: SVG file not found at $ACTUAL"
+          echo "Checking file at: $OUTPUT_PATH"
+          if [ ! -f "$OUTPUT_PATH" ]; then
+            echo "FAIL: SVG file not found at $OUTPUT_PATH"
             exit 1
           fi
-          echo "PASS: SVG file exists"
-
-      - name: Assert SVG content is valid
-        env:
-          ACTUAL: ${{ steps.action.outputs.path }}
-        run: |
-          echo "checking SVG content..."
-          if ! grep -q "<svg" "$ACTUAL"; then
-            echo "FAIL: file does not appear to be a valid SVG"
-            cat "$ACTUAL" || true
+          if ! grep -q "<svg" "$OUTPUT_PATH"; then
+            echo "FAIL: file does not contain SVG content"
+            cat "$OUTPUT_PATH"
             exit 1
           fi
-          echo "PASS: file contains SVG content"
+          echo "PASS: SVG file exists and contains SVG content"

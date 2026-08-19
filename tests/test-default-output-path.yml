@@ -1,0 +1,37 @@
+name: Test default output path
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          card: stats
+          options: "username=anuraghazra"
+          # No path provided — should default to profile/stats.svg
+          token: ${{ github.token }}
+      - name: Assert output path defaults to profile/stats.svg
+        env:
+          ACTUAL: ${{ steps.action.outputs.path }}
+        run: |
+          echo "actual path output: $ACTUAL"
+          if [ "$ACTUAL" != "profile/stats.svg" ]; then
+            echo "FAIL: expected 'profile/stats.svg' but got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS: default path is 'profile/stats.svg'"
+      - name: Assert default SVG file exists
+        run: |
+          if [ ! -f "profile/stats.svg" ]; then
+            echo "FAIL: default SVG file not found at profile/stats.svg"
+            exit 1
+          fi
+          if ! grep -q "<svg" "profile/stats.svg"; then
+            echo "FAIL: file does not contain SVG content"
+            cat "profile/stats.svg"
+            exit 1
+          fi
+          echo "PASS: default SVG file exists at profile/stats.svg"

@@ -1,4 +1,4 @@
-name: Test pin card generation
+name: Test JSON options format
 on:
   workflow_dispatch:
 jobs:
@@ -9,9 +9,10 @@ jobs:
       - id: action
         uses: .
         with:
-          card: pin
-          options: "username=anuraghazra&repo=github-readme-stats"
-          path: "test-output/pin.svg"
+          card: stats
+          # Options provided as JSON instead of query string
+          options: '{"username":"anuraghazra","show_icons":"true"}'
+          path: "test-output/stats-json-opts.svg"
           token: ${{ github.token }}
       - name: Assert output path is set
         env:
@@ -37,4 +38,4 @@ jobs:
             cat "$OUTPUT_PATH"
             exit 1
           fi
-          echo "PASS: SVG file exists and contains SVG content"
+          echo "PASS: SVG file exists and contains SVG content (JSON options)"
