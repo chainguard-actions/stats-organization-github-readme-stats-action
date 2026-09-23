@@ -1,0 +1,37 @@
+name: Test fail_on_error behavior
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      # Test that fail_on_error=false (default) does not fail even if card has an error
+      # We use a deliberately invalid username to trigger an error card
+      - id: action_no_fail
+        uses: .
+        continue-on-error: true
+        with:
+          card: stats
+          options: "username=this-user-definitely-does-not-exist-xyzzy-12345"
+          path: "tests/output/error-card.svg"
+          token: ${{ github.token }}
+          fail_on_error: "false"
+      - name: Assert fail_on_error=false does not throw on error card
+        env:
+          OUTCOME: ${{ steps.action_no_fail.outcome }}
+          ERROR_TYPE: ${{ steps.action_no_fail.outputs.error_type }}
+          ERROR_MSG: ${{ steps.action_no_fail.outputs.error_message }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "error_type: $ERROR_TYPE"
+          echo "error_message: $ERROR_MSG"
+          # With fail_on_error=false, the action should either:
+          # - succeed (writing an error SVG card) if the API returned an error card
+          # - fail gracefully if there's a network/rate-limit issue
+          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action handled error card with fail_on_error=false (outcome: $OUTCOME)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

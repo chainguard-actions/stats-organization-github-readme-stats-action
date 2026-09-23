@@ -1,0 +1,37 @@
+name: Setup Node.js + PNPM and install Dependencies
+description: |
+  This is a composite GitHub Action that:
+  - Sets up pnpm package manager
+  - Configures Node.js environment
+  - Installs project dependencies with caching
+
+inputs:
+  node-version:
+    description: "Explicit node version. Otherwise fallback reading `engines.node` in `package.json`"
+
+runs:
+  using: composite
+
+  steps:
+    - name: Install pnpm
+      uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+    - name: Setup Node.js (via input)
+      if: ${{ inputs.node-version }}
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: "pnpm"
+        registry-url: "https://registry.npmjs.org"
+
+    - name: Setup Node.js (via package.json engines)
+      if: ${{ !inputs.node-version }}
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version-file: "package.json"
+        cache: "pnpm"
+        registry-url: "https://registry.npmjs.org"
+
+    - name: Install Dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile

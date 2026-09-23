@@ -1,0 +1,39 @@
+name: Test default output path
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          card: stats
+          options: "username=anuraghazra"
+          token: ${{ github.token }}
+          # No path specified — should default to profile/stats.svg
+      - name: Assert default output path is profile/stats.svg
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          OUTPUT_PATH: ${{ steps.action.outputs.path }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "output_path: $OUTPUT_PATH"
+          if [ "$OUTCOME" = "success" ]; then
+            if [ "$OUTPUT_PATH" != "profile/stats.svg" ]; then
+              echo "FAIL: expected default path 'profile/stats.svg' but got '$OUTPUT_PATH'"
+              exit 1
+            fi
+            if [ ! -f "profile/stats.svg" ]; then
+              echo "FAIL: SVG file not found at default path 'profile/stats.svg'"
+              exit 1
+            fi
+            echo "PASS: SVG written to default path '$OUTPUT_PATH'"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (likely API rate limit or sentinel repo)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

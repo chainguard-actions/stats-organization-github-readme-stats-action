@@ -1,0 +1,30 @@
+name: Test missing required option fails
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      # The pin card requires 'repo' in options; omitting it should cause the action to fail
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          card: pin
+          options: "username=anuraghazra"
+          # No 'repo' option provided — should fail with "repo is required for the pin card"
+      - name: Assert action failed due to missing required option
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action correctly failed when required 'repo' option is missing for pin card"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "FAIL: action should have failed when 'repo' is missing for pin card"
+            exit 1
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
