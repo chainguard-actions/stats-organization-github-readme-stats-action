@@ -1,4 +1,4 @@
-name: Test invalid card type fails gracefully
+name: Test missing required option fails gracefully
 on:
   workflow_dispatch:
 jobs:
@@ -9,19 +9,20 @@ jobs:
       - id: action
         uses: .
         with:
-          card: invalid-card-type
+          card: pin
+          # Intentionally omit 'repo' which is required for pin card
           options: "username=anuraghazra"
           token: ${{ github.token }}
         continue-on-error: true
-      - name: Assert action fails for invalid card type
+      - name: Assert action fails when required option is missing
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action correctly failed for invalid card type"
+            echo "PASS: action correctly failed when required 'repo' option was missing for pin card"
           elif [ "$OUTCOME" = "success" ]; then
-            echo "FAIL: action should have failed for unsupported card type 'invalid-card-type'"
+            echo "FAIL: action should have failed when 'repo' option is missing for pin card"
             exit 1
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"

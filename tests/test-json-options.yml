@@ -1,4 +1,4 @@
-name: Test top-langs card generation
+name: Test JSON options format
 on:
   workflow_dispatch:
 jobs:
@@ -9,12 +9,13 @@ jobs:
       - id: action
         uses: .
         with:
-          card: top-langs
-          options: "username=anuraghazra"
-          path: "output/top-langs.svg"
+          card: stats
+          # Use JSON format for options instead of query string
+          options: '{"username": "anuraghazra", "show_icons": "true", "theme": "dark"}'
+          path: "output/stats-json-opts.svg"
           token: ${{ github.token }}
         continue-on-error: true
-      - name: Assert output path matches custom path or action failed gracefully
+      - name: Assert JSON options are accepted and output is produced
         env:
           OUTCOME: ${{ steps.action.outcome }}
           OUTPUT_PATH: ${{ steps.action.outputs.path }}
@@ -22,19 +23,17 @@ jobs:
           echo "outcome: $OUTCOME"
           echo "output path: $OUTPUT_PATH"
           if [ "$OUTCOME" = "success" ]; then
-            if [ "$OUTPUT_PATH" != "output/top-langs.svg" ]; then
-              echo "FAIL: expected output path 'output/top-langs.svg', got '$OUTPUT_PATH'"
+            if [ "$OUTPUT_PATH" != "output/stats-json-opts.svg" ]; then
+              echo "FAIL: expected output path 'output/stats-json-opts.svg', got '$OUTPUT_PATH'"
               exit 1
             fi
             echo "PASS: output path matches expected value"
-            # Verify the SVG file was actually written
-            if [ ! -f "$GITHUB_WORKSPACE/output/top-langs.svg" ]; then
-              echo "FAIL: SVG file not found at $GITHUB_WORKSPACE/output/top-langs.svg"
+            if [ ! -f "$GITHUB_WORKSPACE/output/stats-json-opts.svg" ]; then
+              echo "FAIL: SVG file not found at $GITHUB_WORKSPACE/output/stats-json-opts.svg"
               exit 1
             fi
             echo "PASS: SVG file exists"
-            # Verify it looks like an SVG
-            if ! grep -q "<svg" "$GITHUB_WORKSPACE/output/top-langs.svg"; then
+            if ! grep -q "<svg" "$GITHUB_WORKSPACE/output/stats-json-opts.svg"; then
               echo "FAIL: file does not appear to be an SVG"
               exit 1
             fi

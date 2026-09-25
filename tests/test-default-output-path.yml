@@ -1,4 +1,4 @@
-name: Test stats card generation
+name: Test default output path
 on:
   workflow_dispatch:
 jobs:
@@ -11,9 +11,10 @@ jobs:
         with:
           card: stats
           options: "username=anuraghazra"
+          # No 'path' input — should default to profile/stats.svg
           token: ${{ github.token }}
         continue-on-error: true
-      - name: Assert output path is set or action failed gracefully
+      - name: Assert default output path is profile/stats.svg
         env:
           OUTCOME: ${{ steps.action.outcome }}
           OUTPUT_PATH: ${{ steps.action.outputs.path }}
@@ -21,23 +22,16 @@ jobs:
           echo "outcome: $OUTCOME"
           echo "output path: $OUTPUT_PATH"
           if [ "$OUTCOME" = "success" ]; then
-            if [ -z "$OUTPUT_PATH" ]; then
-              echo "FAIL: action succeeded but output path is empty"
+            if [ "$OUTPUT_PATH" != "profile/stats.svg" ]; then
+              echo "FAIL: expected default output path 'profile/stats.svg', got '$OUTPUT_PATH'"
               exit 1
             fi
-            echo "PASS: output path is '$OUTPUT_PATH'"
-            # Verify the SVG file was actually written
-            if [ ! -f "$GITHUB_WORKSPACE/$OUTPUT_PATH" ]; then
-              echo "FAIL: SVG file not found at $GITHUB_WORKSPACE/$OUTPUT_PATH"
+            echo "PASS: default output path is 'profile/stats.svg'"
+            if [ ! -f "$GITHUB_WORKSPACE/profile/stats.svg" ]; then
+              echo "FAIL: SVG file not found at $GITHUB_WORKSPACE/profile/stats.svg"
               exit 1
             fi
-            echo "PASS: SVG file exists"
-            # Verify it looks like an SVG
-            if ! grep -q "<svg" "$GITHUB_WORKSPACE/$OUTPUT_PATH"; then
-              echo "FAIL: file does not appear to be an SVG"
-              exit 1
-            fi
-            echo "PASS: file contains SVG content"
+            echo "PASS: SVG file exists at default path"
           elif [ "$OUTCOME" = "failure" ]; then
             echo "PASS: action failed gracefully (likely API rate limit or network issue)"
           else
