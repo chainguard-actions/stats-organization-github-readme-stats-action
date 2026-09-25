@@ -10,29 +10,22 @@
 
 **Harden Agent Version:** `2`
 
-Action **stats-organization--github-readme-stats-action/v1.2.0** was hardened automatically. 3 finding(s) were identified and resolved across 1 iteration(s).
+Action **stats-organization--github-readme-stats-action/v1.2.0** was hardened automatically. 2 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### script-injection (severity: high)
 
-Rule (a): `${{ github.action_path }}` is directly interpolated inside a `run:` shell command string. Before the shell executes the command, GitHub Actions substitutes the expression value into the script text, which can allow injection of shell metacharacters. Offending line: `run: echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "${{ github.action_path }}/package.json")" >> "$GITHUB_OUTPUT"`
+Two `run:` blocks in action.yml directly interpolate `${{ github.action_path }}` inside shell command strings (sub-rule a: any `${{ ... }}` expression in a `run:` block is a script-injection risk). Line 27: `run: echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "${{ github.action_path }}/package.json")" >> "$GITHUB_OUTPUT"`. Line 41: `run: node ${{ github.action_path }}/index.js`. These should be replaced with the `$GITHUB_ACTION_PATH` environment variable instead of the template expression.
 
 Locations:
 
 - `action.yml:27`
-
-### script-injection (severity: high)
-
-Rule (a): `${{ github.action_path }}` is directly interpolated inside a `run:` shell command string. Before the shell executes the command, GitHub Actions substitutes the expression value into the script text, which can allow injection of shell metacharacters. Offending line: `run: node ${{ github.action_path }}/index.js`
-
-Locations:
-
-- `action.yml:43`
+- `action.yml:41`
 
 ### github-env-injection (severity: high)
 
-The `run:` block writes a value derived from `${{ github.action_path }}` (a `github.*` context expression) to `$GITHUB_OUTPUT` without the required sanitization step (`printf '%s' "$VAR" | tr -d '\n\r'`). A newline embedded in the value could inject additional key=value pairs into the output file. Offending line: `echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "${{ github.action_path }}/package.json")" >> "$GITHUB_OUTPUT"`
+Line 27 of action.yml writes a value derived from `${{ github.action_path }}` directly to `$GITHUB_OUTPUT` without the required sanitization step (`printf '%s' ... | tr -d '\n\r'`). The run block is: `echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "${{ github.action_path }}/package.json")" >> "$GITHUB_OUTPUT"`. The expression is interpolated directly into the shell command and then written to the special environment file, bypassing newline sanitization.
 
 Locations:
 
@@ -46,8 +39,7 @@ Locations:
 
 **Notes:**
 
-Fixed three findings in hardened/action/action.yml:
-1. (line 27) script-injection: Moved `${{ github.action_path }}` into an `env:` block as `ACTION_PATH` in the 'Resolve relative path to package.json' step; the shell script now references `$ACTION_PATH` instead of the raw expression.
-2. (line 27) github-env-injection: Added sanitization of the realpath output using `printf '%s' "$raw" | tr -d '\n\r'` before writing to `$GITHUB_OUTPUT`.
-3. (line 43) script-injection: Moved `${{ github.action_path }}` into an `env:` block as `ACTION_PATH` in the 'Generate card' step; the shell script now uses `"$ACTION_PATH/index.js"` instead of the raw expression.
+Fixed both findings in action.yml:
+1. Line 27 (script-injection + github-env-injection): Replaced `${{ github.action_path }}` with `$GITHUB_ACTION_PATH` and rewrote the run block to sanitize the value with `printf '%s' "$raw" | tr -d '\n\r'` before writing to `$GITHUB_OUTPUT`.
+2. Line 41 (script-injection): Replaced `${{ github.action_path }}` with `"$GITHUB_ACTION_PATH"` (properly quoted shell variable).
 
