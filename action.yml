@@ -73,7 +73,7 @@ runs:
       with:
         package_json_file: ${{ steps.resolve_path.outputs.package_json }}
     - name: Setup Node.js
-      uses: chainguard-actions/actions-setup-node@4ac5427eb3eb5e9c30595faee05f5b6ef2e371d0 # v7.0.0
+      uses: chainguard-actions/actions-setup-node@5b1db53754f77246b80c63a657eefd395655dd0e # v7.0.0
       with:
         node-version-file: ${{ steps.resolve_path.outputs.package_json }}
     - name: Install dependencies
