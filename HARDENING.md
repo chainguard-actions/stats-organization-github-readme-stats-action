@@ -10,46 +10,29 @@
 
 **Harden Agent Version:** `2`
 
-Action **stats-organization--github-readme-stats-action/v2.0.1** was hardened automatically. 2 finding(s) were identified and resolved across 1 iteration(s).
+Action **stats-organization--github-readme-stats-action/v2.0.1** was hardened automatically. 1 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### script-injection (severity: high)
 
-Two `run:` blocks in action.yml directly interpolate `${{ github.action_path }}` — a GitHub Actions expression — inside shell command strings (sub-rule a). Any `${{ ... }}` expression interpolated directly into a `run:` block flows through YAML template substitution before the shell sees it, enabling script injection if the value contains shell metacharacters.
-
-1. Line 36: `run: echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "${{ github.action_path }}/package.json")" >> "$GITHUB_OUTPUT"` — `${{ github.action_path }}` is interpolated directly in the shell command.
-
-2. Line 55: `run: node ${{ github.action_path }}/index.js` — `${{ github.action_path }}` is interpolated directly in the shell command.
-
-Fix: use the pre-set `$GITHUB_ACTION_PATH` environment variable instead of the `${{ github.action_path }}` expression, e.g. `run: node "$GITHUB_ACTION_PATH/index.js"`.
+Two `run:` blocks in action.yml directly interpolate `${{ github.action_path }}` — a GitHub Actions expression — inside shell command strings (sub-rule a). Even though `github.action_path` is GitHub-infrastructure-controlled rather than attacker-supplied, any `${{ ... }}` expression interpolated directly into a `run:` block is a script-injection violation because the value flows through YAML template substitution before the shell ever sees it, bypassing shell quoting. (1) Line 35: `run: echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "${{ github.action_path }}/package.json")" >> "$GITHUB_OUTPUT"`. (2) Line 57: `run: node ${{ github.action_path }}/index.js`. Fix: replace both with the environment-variable form — set `ACTION_PATH: ${{ github.action_path }}` in an `env:` block and reference `"$ACTION_PATH"` (double-quoted) inside the shell script.
 
 Locations:
 
-- `action.yml:36`
-- `action.yml:55`
-
-### github-env-injection (severity: high)
-
-Line 36 of action.yml writes a value derived from `${{ github.action_path }}` (a `github.*` context — an untrusted-input source per the check rules) to `$GITHUB_OUTPUT` without the required sanitization step (`printf '%s' ... | tr -d '\n\r'`). The offending line is:
-
-`run: echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "${{ github.action_path }}/package.json")" >> "$GITHUB_OUTPUT"`
-
-Fix: assign `$GITHUB_ACTION_PATH` to a local variable, sanitize it with `printf '%s' "$GITHUB_ACTION_PATH" | tr -d '\n\r'`, then use the sanitized value in the write to `$GITHUB_OUTPUT`.
-
-Locations:
-
-- `action.yml:36`
+- `action.yml:35`
+- `action.yml:57`
 
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** script-injection, github-env-injection
+**Fixes applied:** script-injection
 
 **Notes:**
 
-Fixed both findings in action.yml:
-1. Line 36 (script-injection + github-env-injection): Replaced `${{ github.action_path }}` with `$GITHUB_ACTION_PATH` and added sanitization (`printf '%s' "$GITHUB_ACTION_PATH" | tr -d '\n\r'`) before writing to `$GITHUB_OUTPUT`.
-2. Line 55 (script-injection): Replaced `node ${{ github.action_path }}/index.js` with `node "$GITHUB_ACTION_PATH/index.js"` using the pre-set environment variable instead of the template expression.
+Fixed two script-injection findings in hardened/action/action.yml:
+1. Line 35 (Compute workspace-relative package.json path step): Added `env: ACTION_PATH: ${{ github.action_path }}` and replaced the inline `${{ github.action_path }}` expression with `"$ACTION_PATH"` in the shell script.
+2. Line 57 (Generate card step): Added `ACTION_PATH: ${{ github.action_path }}` to the existing `env:` block and replaced `node ${{ github.action_path }}/index.js` with `node "$ACTION_PATH/index.js"` (with proper double-quoting).
+Both fixes move the GitHub Actions expression out of the shell string and into the env: block, preventing YAML template substitution from bypassing shell quoting.
 
