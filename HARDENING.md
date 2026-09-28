@@ -16,30 +16,20 @@ Action **stats-organization--github-readme-stats-action/v2.0.2** was hardened au
 
 ### script-injection (severity: high)
 
-Two `run:` blocks in action.yml directly interpolate `${{ github.action_path }}` (a `github.*` context expression) inside shell command strings, violating sub-rule (a). Any `${{ ... }}` expression inside a `run:` block is a script-injection risk regardless of context.
-
-Line 44: `run: echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "${{ github.action_path }}/package.json")" >> "$GITHUB_OUTPUT"`
-
-Line 63: `run: node ${{ github.action_path }}/index.js`
-
-Fix: replace `${{ github.action_path }}` with the pre-set env var `$GITHUB_ACTION_PATH` (which GitHub Actions already exposes as a safe shell variable) or assign it to an `env:` variable and reference that instead.
+Sub-rule (a): Two `run:` blocks in action.yml directly interpolate `${{ github.action_path }}` into shell command strings. Any `${{ ... }}` expression inside a `run:` block is a script-injection risk because the value is substituted by the Actions template engine before the shell ever sees it, bypassing shell quoting. (1) Line 43: `run: echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "${{ github.action_path }}/package.json")" >> "$GITHUB_OUTPUT"`. (2) Line 55: `run: node ${{ github.action_path }}/index.js`. Both should use the `$GITHUB_ACTION_PATH` environment variable instead (e.g. `node "$GITHUB_ACTION_PATH/index.js"`).
 
 Locations:
 
-- `action.yml:44`
-- `action.yml:63`
+- `action.yml:43`
+- `action.yml:55`
 
 ### github-env-injection (severity: high)
 
-The `run:` block on line 44 of action.yml writes a value derived from `${{ github.action_path }}` (a `github.*` context) directly to `$GITHUB_OUTPUT` without the required sanitization step (`printf '%s' ... | tr -d '\n\r'`). Although `github.action_path` is not typically attacker-controlled, the check rules classify all `github.*` values as untrusted inputs that must be sanitized before being written to special environment files.
-
-Offending line: `run: echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "${{ github.action_path }}/package.json")" >> "$GITHUB_OUTPUT"`
-
-Fix: use `$GITHUB_ACTION_PATH` env var directly (no expression interpolation needed) and sanitize before writing: `safe=$(printf '%s' "$(realpath --relative-to="$GITHUB_WORKSPACE" "$GITHUB_ACTION_PATH/package.json")" | tr -d '\n\r'); echo "package_json=$safe" >> "$GITHUB_OUTPUT"`
+The `run:` block at line 43 writes a value derived from `${{ github.action_path }}` (a `github.*` context) directly to `$GITHUB_OUTPUT` without the required sanitization step (`printf '%s' ... | tr -d '\n\r'`). The offending line is: `echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "${{ github.action_path }}/package.json")" >> "$GITHUB_OUTPUT"`. A safe fix is to use the `$GITHUB_ACTION_PATH` env var (which avoids template interpolation) and sanitize before writing: `safe=$(printf '%s' "$(realpath --relative-to="$GITHUB_WORKSPACE" "$GITHUB_ACTION_PATH/package.json")" | tr -d '\n\r'); echo "package_json=$safe" >> "$GITHUB_OUTPUT"`.
 
 Locations:
 
-- `action.yml:44`
+- `action.yml:43`
 
 ## Iteration Notes
 
@@ -49,9 +39,7 @@ Locations:
 
 **Notes:**
 
-Fixed two findings in hardened/action/action.yml:
-1. Line 44 (script-injection + github-env-injection): Replaced `${{ github.action_path }}` with `$GITHUB_ACTION_PATH` (the pre-set shell env var) and added sanitization via `printf '%s' ... | tr -d '\n\r'` before writing to $GITHUB_OUTPUT.
-2. Line 63 (script-injection): Replaced `node ${{ github.action_path }}/index.js` with `node "$GITHUB_ACTION_PATH/index.js"` to eliminate the template expression from the shell command string.
-
-The `working-directory: ${{ github.action_path }}` YAML key (not a run: shell string) was not flagged and left unchanged.
+Fixed two script-injection issues and one github-env-injection issue in action.yml:
+1. Line 43 (script-injection + github-env-injection): Replaced `${{ github.action_path }}` with `$GITHUB_ACTION_PATH` in the realpath command, converted to a multi-line run block, and added sanitization with `printf '%s' ... | tr -d '\n\r'` before writing to $GITHUB_OUTPUT.
+2. Line 55 (script-injection): Replaced `node ${{ github.action_path }}/index.js` with `node "$GITHUB_ACTION_PATH/index.js"`, using the built-in environment variable with proper quoting to avoid template engine interpolation.
 

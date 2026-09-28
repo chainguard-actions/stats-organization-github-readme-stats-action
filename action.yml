@@ -60,11 +60,11 @@ runs:
         echo "package_json=$safe" >> "$GITHUB_OUTPUT"
       shell: bash
     - name: Install pnpm
-      uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      uses: chainguard-actions/pnpm-action-setup@75b6e1d3890d320820862192f4966bdb2e96c0e9 # v6.0.9
       with:
         package_json_file: ${{ steps.resolve_path.outputs.package_json }}
     - name: Setup Node.js
-      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      uses: chainguard-actions/actions-setup-node@5b1db53754f77246b80c63a657eefd395655dd0e # v7.0.0
       with:
         node-version-file: ${{ steps.resolve_path.outputs.package_json }}
     - name: Install dependencies
