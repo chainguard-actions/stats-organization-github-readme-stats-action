@@ -49,8 +49,9 @@ runs:
       env:
         ACTION_PATH: ${{ github.action_path }}
       run: |
-        safe_action_path=$(printf '%s' "$ACTION_PATH" | tr -d '\n\r')
-        echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "$safe_action_path/package.json")" >> "$GITHUB_OUTPUT"
+        safe_path=$(realpath --relative-to="$GITHUB_WORKSPACE" "$ACTION_PATH/package.json")
+        safe_path=$(printf '%s' "$safe_path" | tr -d '\n\r')
+        echo "package_json=$safe_path" >> "$GITHUB_OUTPUT"
       shell: bash
     - name: Install pnpm
       uses: chainguard-actions/pnpm-action-setup@55cb2ce0b5b539c43e25408829527813a667ff5e # v5

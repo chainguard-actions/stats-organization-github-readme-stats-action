@@ -10,36 +10,33 @@
 
 **Harden Agent Version:** `2`
 
-Action **stats-organization--github-readme-stats-action/v2.0.0** was hardened automatically. 2 finding(s) were identified and resolved across 1 iteration(s).
+Action **stats-organization--github-readme-stats-action/v2.0.0** was hardened automatically. 3 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### script-injection (severity: high)
 
-Two `run:` blocks in action.yml directly interpolate `${{ github.action_path }}` (a `github.*` context expression) into shell command strings, violating sub-rule (a). Any `${{ ... }}` expression inside a `run:` block is a script-injection risk regardless of which context it reads from.
-
-1. Line 29: `run: echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "${{ github.action_path }}/package.json")" >> "$GITHUB_OUTPUT"` — `${{ github.action_path }}` is interpolated directly into the shell command.
-
-2. Line 43: `run: node ${{ github.action_path }}/index.js` — `${{ github.action_path }}` is interpolated directly into the shell command.
-
-Fix: Move `github.action_path` into an `env:` variable and reference it as a quoted shell variable (e.g., `"$ACTION_PATH"`) inside the `run:` block.
+Sub-rule (a): The 'Resolve relative path to package.json' run: block directly interpolates the GitHub Actions expression `${{ github.action_path }}` inside a shell command string. Any `${{ ... }}` expression inside a run: block is a script-injection risk because the value flows through YAML template substitution before the shell ever sees it. Offending line: `run: echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "${{ github.action_path }}/package.json")" >> "$GITHUB_OUTPUT"`
 
 Locations:
 
-- `action.yml:29`
-- `action.yml:43`
+- `action.yml:32`
+
+### script-injection (severity: high)
+
+Sub-rule (a): The 'Generate card' run: block directly interpolates the GitHub Actions expression `${{ github.action_path }}` inside a shell command string. Any `${{ ... }}` expression inside a run: block is a script-injection risk because the value flows through YAML template substitution before the shell ever sees it. Offending line: `run: node ${{ github.action_path }}/index.js`
+
+Locations:
+
+- `action.yml:47`
 
 ### github-env-injection (severity: high)
 
-Line 29 of action.yml writes a value derived from `${{ github.action_path }}` (a `github.*` context value) directly to `$GITHUB_OUTPUT` without the required sanitization step (`printf '%s' ... | tr -d '\n\r'`).
-
-Offending line: `run: echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "${{ github.action_path }}/package.json")" >> "$GITHUB_OUTPUT"`
-
-Fix: Assign `github.action_path` to an env var, sanitize it with `safe=$(printf '%s' "$ACTION_PATH" | tr -d '\n\r')`, then use the sanitized value in the echo command before writing to `$GITHUB_OUTPUT`.
+The 'Resolve relative path to package.json' run: block writes a value derived from `${{ github.action_path }}` (a github.* context, which is treated as untrusted per the check rules) directly to $GITHUB_OUTPUT without the required sanitization step (`printf '%s' ... | tr -d '\n\r'`). The safe pattern would be to capture the path into a variable, sanitize it with `printf '%s' "$VAR" | tr -d '\n\r'`, and then write the sanitized value to $GITHUB_OUTPUT.
 
 Locations:
 
-- `action.yml:29`
+- `action.yml:32`
 
 ## Iteration Notes
 
@@ -49,7 +46,7 @@ Locations:
 
 **Notes:**
 
-Fixed both findings in action.yml:
-1. Line 29 (script-injection + github-env-injection): Moved `${{ github.action_path }}` into an `env:` block as `ACTION_PATH`, added sanitization via `printf '%s' "$ACTION_PATH" | tr -d '\n\r'` into `safe_action_path`, and used the sanitized variable in the `realpath` command before writing to `$GITHUB_OUTPUT`.
-2. Line 43 (script-injection): Moved `${{ github.action_path }}` into the step's `env:` block as `ACTION_PATH` and referenced it as `"$ACTION_PATH/index.js"` in the `run:` block.
+Fixed three findings in action.yml:
+1. 'Resolve relative path to package.json' step (line 32): Moved `${{ github.action_path }}` into the `env:` block as `ACTION_PATH`, referenced it as `$ACTION_PATH` in the shell script, and added sanitization (`printf '%s' "$safe_path" | tr -d '\n\r'`) before writing to `$GITHUB_OUTPUT`.
+2. 'Generate card' step (line 47): Moved `${{ github.action_path }}` into the `env:` block as `ACTION_PATH` and referenced it as `"$ACTION_PATH/index.js"` in the shell command.
 
