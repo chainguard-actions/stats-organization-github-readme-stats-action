@@ -43,9 +43,8 @@ runs:
     - name: Resolve relative path to package.json
       id: resolve-path
       run: |
-        raw=$(realpath --relative-to="$GITHUB_WORKSPACE" "$GITHUB_ACTION_PATH/package.json")
-        safe=$(printf '%s' "$raw" | tr -d '\n\r')
-        echo "package_json=$safe" >> "$GITHUB_OUTPUT"
+        safe_path=$(printf '%s' "$GITHUB_ACTION_PATH" | tr -d '\n\r')
+        echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "$safe_path/package.json")" >> "$GITHUB_OUTPUT"
       shell: bash
     - name: Install pnpm
       uses: chainguard-actions/pnpm-action-setup@55cb2ce0b5b539c43e25408829527813a667ff5e # v5
