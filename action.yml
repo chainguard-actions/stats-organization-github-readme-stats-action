@@ -56,7 +56,8 @@ runs:
     - name: Compute workspace-relative package.json path
       id: resolve_path
       run: |
-        safe=$(printf '%s' "$(realpath --relative-to="$GITHUB_WORKSPACE" "$GITHUB_ACTION_PATH/package.json")" | tr -d '\n\r')
+        val=$(realpath --relative-to="$GITHUB_WORKSPACE" "$GITHUB_ACTION_PATH/package.json")
+        safe=$(printf '%s' "$val" | tr -d '\n\r')
         echo "package_json=$safe" >> "$GITHUB_OUTPUT"
       shell: bash
     - name: Install pnpm
