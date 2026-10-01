@@ -10,29 +10,44 @@
 
 **Harden Agent Version:** `2`
 
-Action **stats-organization--github-readme-stats-action/v2.0.1** was hardened automatically. 1 finding(s) were identified and resolved across 1 iteration(s).
+Action **stats-organization--github-readme-stats-action/v2.0.1** was hardened automatically. 2 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### script-injection (severity: high)
 
-Two `run:` blocks in action.yml directly interpolate `${{ github.action_path }}` — a GitHub Actions expression — inside shell command strings (sub-rule a). Even though `github.action_path` is GitHub-infrastructure-controlled rather than attacker-supplied, any `${{ ... }}` expression interpolated directly into a `run:` block is a script-injection violation because the value flows through YAML template substitution before the shell ever sees it, bypassing shell quoting. (1) Line 35: `run: echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "${{ github.action_path }}/package.json")" >> "$GITHUB_OUTPUT"`. (2) Line 57: `run: node ${{ github.action_path }}/index.js`. Fix: replace both with the environment-variable form — set `ACTION_PATH: ${{ github.action_path }}` in an `env:` block and reference `"$ACTION_PATH"` (double-quoted) inside the shell script.
+Two `run:` blocks in action.yml directly interpolate `${{ github.action_path }}` expressions inside shell command strings (rule a). Although `github.action_path` is not attacker-controlled via PRs, any `${{ ... }}` expression interpolated directly into a `run:` block is a script-injection finding per the check rules.
+
+1. Step 'Compute workspace-relative package.json path': `run: echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "${{ github.action_path }}/package.json")" >> "$GITHUB_OUTPUT"` — `${{ github.action_path }}` is interpolated directly in the shell command.
+
+2. Step 'Generate card': `run: node ${{ github.action_path }}/index.js` — `${{ github.action_path }}` is interpolated directly in the shell command.
+
+Fix: use the `$GITHUB_ACTION_PATH` environment variable instead of `${{ github.action_path }}` in `run:` blocks.
 
 Locations:
 
-- `action.yml:35`
-- `action.yml:57`
+- `action.yml:36`
+- `action.yml:51`
+
+### github-env-injection (severity: high)
+
+The 'Compute workspace-relative package.json path' step writes a value derived from `${{ github.action_path }}` directly to `$GITHUB_OUTPUT` without the required sanitization step (`printf '%s' ... | tr -d '\n\r'`). The command is: `echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "${{ github.action_path }}/package.json")" >> "$GITHUB_OUTPUT"`. The expression `${{ github.action_path }}` is substituted by the Actions runner before the shell executes, so a newline embedded in the value could inject additional key=value pairs into `$GITHUB_OUTPUT`.
+
+Fix: use `$GITHUB_ACTION_PATH` env var and sanitize before writing: `safe=$(printf '%s' "$(realpath --relative-to="$GITHUB_WORKSPACE" "$GITHUB_ACTION_PATH/package.json")" | tr -d '\n\r'); echo "package_json=$safe" >> "$GITHUB_OUTPUT"`.
+
+Locations:
+
+- `action.yml:36`
 
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** script-injection
+**Fixes applied:** script-injection, github-env-injection
 
 **Notes:**
 
-Fixed two script-injection findings in hardened/action/action.yml:
-1. Line 35 (Compute workspace-relative package.json path step): Added `env: ACTION_PATH: ${{ github.action_path }}` and replaced the inline `${{ github.action_path }}` expression with `"$ACTION_PATH"` in the shell script.
-2. Line 57 (Generate card step): Added `ACTION_PATH: ${{ github.action_path }}` to the existing `env:` block and replaced `node ${{ github.action_path }}/index.js` with `node "$ACTION_PATH/index.js"` (with proper double-quoting).
-Both fixes move the GitHub Actions expression out of the shell string and into the env: block, preventing YAML template substitution from bypassing shell quoting.
+Fixed both findings in action.yml:
+1. script-injection (lines 36 and 51): Replaced `${{ github.action_path }}` with the `$GITHUB_ACTION_PATH` environment variable in both `run:` blocks. The 'Generate card' step now uses `node "$GITHUB_ACTION_PATH/index.js"` (properly quoted).
+2. github-env-injection (line 36): The 'Compute workspace-relative package.json path' step now sanitizes the computed path with `printf '%s' ... | tr -d '\n\r'` before writing to `$GITHUB_OUTPUT`, preventing newline injection. Both fixes together eliminate the direct `${{ github.action_path }}` interpolation in shell command strings.
 

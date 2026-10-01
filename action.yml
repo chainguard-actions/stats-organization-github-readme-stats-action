@@ -50,9 +50,9 @@ runs:
     # ${{ github.action_path }} — convert to a workspace-relative path.
     - name: Compute workspace-relative package.json path
       id: resolve_path
-      env:
-        ACTION_PATH: ${{ github.action_path }}
-      run: echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "$ACTION_PATH/package.json")" >> "$GITHUB_OUTPUT"
+      run: |
+        safe=$(printf '%s' "$(realpath --relative-to="$GITHUB_WORKSPACE" "$GITHUB_ACTION_PATH/package.json")" | tr -d '\n\r')
+        echo "package_json=$safe" >> "$GITHUB_OUTPUT"
       shell: bash
     - name: Install pnpm
       uses: chainguard-actions/pnpm-action-setup@44c31db72699e9f41d17d9cf93760ce624975ae5 # v6.0.8
@@ -71,10 +71,9 @@ runs:
       working-directory: ${{ github.action_path }}
     - name: Generate card
       id: generate
-      run: node "$ACTION_PATH/index.js"
+      run: node "$GITHUB_ACTION_PATH/index.js"
       shell: bash
       env:
-        ACTION_PATH: ${{ github.action_path }}
         INPUT_CARD: ${{ inputs.card }}
         INPUT_OPTIONS: ${{ inputs.options }}
         INPUT_PATH: ${{ inputs.path }}
