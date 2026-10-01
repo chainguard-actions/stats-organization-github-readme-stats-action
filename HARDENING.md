@@ -16,7 +16,7 @@ Action **stats-organization--github-readme-stats-action/v2.1.0** was hardened au
 
 ### script-injection (severity: high)
 
-Sub-rule (a): Two `run:` blocks in action.yml directly interpolate `${{ github.action_path }}` (a `github.*` context expression) into shell command strings. Per the check rules, ANY `${{ ... }}` expression inside a `run:` block is a script-injection finding. (1) Line 55: `run: echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "${{ github.action_path }}/package.json")" >> "$GITHUB_OUTPUT"`. (2) Line 68: `run: node ${{ github.action_path }}/index.js`. These should be replaced with the `$GITHUB_ACTION_PATH` environment variable, which is already available as a safe shell variable.
+Two `run:` blocks in action.yml directly interpolate `${{ github.action_path }}` (a GitHub Actions expression) inside shell command strings. Per rule (a), any `${{ ... }}` expression interpolated directly inside a `run:` block is a script-injection risk, as the value flows through YAML template substitution before the shell processes it. (1) `run: echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "${{ github.action_path }}/package.json")" >> "$GITHUB_OUTPUT"` — the expression is embedded directly in the shell command. (2) `run: node ${{ github.action_path }}/index.js` — same issue. Both should use the `$GITHUB_ACTION_PATH` environment variable instead (e.g. `run: node "$GITHUB_ACTION_PATH/index.js"`)
 
 Locations:
 
@@ -25,7 +25,7 @@ Locations:
 
 ### github-env-injection (severity: high)
 
-A `run:` block writes a value derived from `${{ github.action_path }}` (a `github.*` context) directly to `$GITHUB_OUTPUT` without the required sanitization step (`printf '%s' ... | tr -d '\n\r'`). Line 55: `run: echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "${{ github.action_path }}/package.json")" >> "$GITHUB_OUTPUT"`. The `github.action_path` value is embedded in the command and its output is written unsanitized to GITHUB_OUTPUT.
+The 'Compute workspace-relative package.json path' step writes a value derived from `${{ github.action_path }}` (a `github.*` context) directly to `$GITHUB_OUTPUT` without the required sanitization step (`printf '%s' ... | tr -d '\n\r'`). The command is: `echo "package_json=$(realpath --relative-to="$GITHUB_WORKSPACE" "${{ github.action_path }}/package.json")" >> "$GITHUB_OUTPUT"`. A newline injected into `github.action_path` could allow an attacker to inject arbitrary key-value pairs into `$GITHUB_OUTPUT`. The fix is to use the pre-set `$GITHUB_ACTION_PATH` environment variable (which avoids template injection entirely) and sanitize before writing: `safe=$(printf '%s' "$(realpath --relative-to="$GITHUB_WORKSPACE" "$GITHUB_ACTION_PATH/package.json")" | tr -d '\n\r'); echo "package_json=$safe" >> "$GITHUB_OUTPUT"`
 
 Locations:
 
@@ -39,5 +39,9 @@ Locations:
 
 **Notes:**
 
-Fixed two locations in action.yml: (1) Line 55: Replaced `${{ github.action_path }}` with `$GITHUB_ACTION_PATH` in the run: block and added sanitization (`tr -d '\n\r'`) before writing to $GITHUB_OUTPUT, restructured as a multi-line run block. (2) Line 68: Replaced `${{ github.action_path }}` with `"$GITHUB_ACTION_PATH"` (properly quoted) in the node command. Both fixes use the safe `$GITHUB_ACTION_PATH` shell variable that GitHub Actions provides automatically, eliminating the script-injection and github-env-injection risks.
+Fixed both findings in action.yml:
+1. Line 55 (script-injection + github-env-injection): Replaced `${{ github.action_path }}` with `$GITHUB_ACTION_PATH` in the 'Compute workspace-relative package.json path' step's run: block, and added sanitization (`printf '%s' ... | tr -d '\n\r'`) before writing to $GITHUB_OUTPUT.
+2. Line 68 (script-injection): Replaced `node ${{ github.action_path }}/index.js` with `node "$GITHUB_ACTION_PATH/index.js"` in the 'Generate card' step's run: block.
+
+The `working-directory: ${{ github.action_path }}` field in the 'Install dependencies' step is a YAML `with:` field (not a `run:` shell string), so it is not a script-injection risk and was left unchanged.
 
